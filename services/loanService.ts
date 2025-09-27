@@ -80,12 +80,19 @@ export const getLoanApplications = async (): Promise<LoanApplication[]> => {
     const applications: LoanApplication[] = [];
     
     querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
       applications.push({
         id: docSnapshot.id,
-        ...docSnapshot.data(),
-        createdAt: docSnapshot.data().createdAt?.toDate() || new Date(),
-        updatedAt: docSnapshot.data().updatedAt?.toDate() || new Date(),
-      } as LoanApplication);
+        name: data.name,
+        email: data.email,
+        telephone: data.telephone,
+        occupation: data.occupation,
+        salary: data.salary,
+        paysheetUrl: data.paysheetUrl || '',       // <- safe fallback
+        paysheetName: data.paysheetName || '',     // <- safe fallback
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+      });
     });
 
     return applications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -94,6 +101,7 @@ export const getLoanApplications = async (): Promise<LoanApplication[]> => {
     throw error;
   }
 };
+
 
 // --- Update ---
 export const updateLoanApplication = async (id: string, formData: LoanFormData): Promise<void> => {
