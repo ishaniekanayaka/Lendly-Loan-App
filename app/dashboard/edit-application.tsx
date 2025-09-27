@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,16 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { LinearGradient } from 'expo-linear-gradient';
-import { FileText, Upload, User, Mail, Phone, Briefcase, DollarSign } from 'lucide-react-native';
+import { FileText, Upload, User, Mail, Phone, Briefcase, DollarSign, Save } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { router } from 'expo-router';
-import { submitLoanApplication } from '@/services/loanService';
+import { router, useLocalSearchParams } from 'expo-router';
+import { getLoanApplication, updateLoanApplication } from '@/services/loanService';
 import { LoanFormData } from '@/types/loan';
 
-export default function LoanApplicationScreen() {
+export default function EditApplicationScreen() {
   const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [formData, setFormData] = useState<LoanFormData>({
     name: '',
     email: '',
@@ -25,7 +25,41 @@ export default function LoanApplicationScreen() {
     occupation: '',
     salary: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [currentPaysheet, setCurrentPaysheet] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  const loadApplication = useCallback(async () => {
+    try {
+      const application = await getLoanApplication(id);
+      if (application) {
+        setFormData({
+          name: application.name,
+          email: application.email,
+          telephone: application.telephone,
+          occupation: application.occupation,
+          salary: application.salary,
+        });
+        setCurrentPaysheet(application.paysheetName || '');
+      } else {
+        console.log('Application not found');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Error loading application:', error);
+      router.back();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadApplication();
+    }
+  }, [id, loadApplication]);
+
+
 
   const handleInputChange = (field: keyof LoanFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -56,47 +90,51 @@ export default function LoanApplicationScreen() {
 
   const validateForm = (): string | null => {
     if (!formData.name.trim()) {
-      return 'Please enter your name';
+      return 'Please enter the name';
     }
     if (!formData.email.trim() || !formData.email.includes('@')) {
       return 'Please enter a valid email address';
     }
     if (!formData.telephone.trim()) {
-      return 'Please enter your telephone number';
+      return 'Please enter the telephone number';
     }
     if (!formData.occupation.trim()) {
-      return 'Please enter your occupation';
+      return 'Please enter the occupation';
     }
     if (!formData.salary.trim()) {
-      return 'Please enter your salary';
+      return 'Please enter the salary';
     }
     return null;
   };
 
-  const handleSubmit = async () => {
+  const handleUpdate = async () => {
     const validationError = validateForm();
     if (validationError) {
       console.log('Validation error:', validationError);
       return;
     }
 
-    setIsSubmitting(true);
+    setIsUpdating(true);
     try {
-      const applicationId = await submitLoanApplication(formData);
-      console.log('Application submitted successfully:', applicationId);
-      setFormData({
-        name: '',
-        email: '',
-        telephone: '',
-        occupation: '',
-        salary: '',
-      });
+      await updateLoanApplication(id, formData);
+      console.log('Application updated successfully!');
+      router.back();
     } catch (error) {
-      console.error('Error submitting application:', error);
+      console.error('Error updating application:', error);
     } finally {
-      setIsSubmitting(false);
+      setIsUpdating(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+          <View style={[styles.loadingContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+            <Text style={styles.loadingText}>Loading application...</Text>
+          </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
@@ -106,8 +144,8 @@ export default function LoanApplicationScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Loan Application</Text>
-            <Text style={styles.subtitle}>Fill out the form below to apply for a loan</Text>
+            <Text style={styles.title}>Edit Application</Text>
+            <Text style={styles.subtitle}>Update the application details</Text>
           </View>
 
           <View style={styles.form}>
@@ -173,26 +211,25 @@ export default function LoanApplicationScreen() {
             <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
               <Upload color="#667eea" size={20} />
               <Text style={styles.uploadButtonText}>
-                {formData.paysheet ? formData.paysheet.name : 'Upload Paysheet (PDF)'}
+                {formData.paysheet 
+                  ? formData.paysheet.name 
+                  : currentPaysheet 
+                    ? `Current: ${currentPaysheet}` 
+                    : 'Upload New Paysheet (PDF)'
+                }
               </Text>
-              {formData.paysheet && <FileText color="#4CAF50" size={20} />}
+              {(formData.paysheet || currentPaysheet) && <FileText color="#4CAF50" size={20} />}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
+              style={[styles.updateButton, isUpdating && styles.updateButtonDisabled]}
+              onPress={handleUpdate}
+              disabled={isUpdating}
             >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? 'Submitting...' : 'Submit Application'}
+              <Save color="white" size={20} />
+              <Text style={styles.updateButtonText}>
+                {isUpdating ? 'Updating...' : 'Update Application'}
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.managerButton}
-              onPress={() => router.push('/manager-login')}
-            >
-              <Text style={styles.managerButtonText}>Manager Login</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -206,6 +243,15 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
   },
   header: {
     alignItems: 'center',
@@ -276,31 +322,21 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  submitButton: {
+  updateButton: {
     backgroundColor: '#667eea',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  submitButtonDisabled: {
+  updateButtonDisabled: {
     backgroundColor: '#ccc',
   },
-  submitButtonText: {
+  updateButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
-  },
-  managerButton: {
-    borderWidth: 1,
-    borderColor: '#667eea',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  managerButtonText: {
-    color: '#667eea',
-    fontSize: 16,
-    fontWeight: '500',
+    marginLeft: 8,
   },
 });
