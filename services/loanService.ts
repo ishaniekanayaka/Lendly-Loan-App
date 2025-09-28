@@ -84,8 +84,8 @@ export const generateMobilePDFUrl = (cloudinaryUrl: string): string => {
     if (cloudinaryUrl && cloudinaryUrl.includes("cloudinary.com")) {
       const parts = cloudinaryUrl.split("/upload/");
       if (parts.length === 2) {
-        // Optimized for mobile viewing - smaller file size, progressive loading
-        return `${parts[0]}/upload/f_auto,q_auto:eco,w_800,fl_progressive,fl_attachment:inline/${parts[1]}`;
+        // Optimize for mobile but DO NOT force download
+        return `${parts[0]}/upload/f_auto,q_auto:eco,w_800/${parts[1]}`;
       }
     }
     return cloudinaryUrl;
