@@ -18,7 +18,7 @@ const uploadToCloudinary = async (fileUri: string, fileName: string): Promise<st
   // React Native FormData file object
   formData.append("file", {
     uri: fileUri,
-    type: "application/pdf", // or "image/jpeg" if images
+    type: "application/pdf",
     name: fileName,
   } as any);
 
@@ -29,6 +29,9 @@ const uploadToCloudinary = async (fileUri: string, fileName: string): Promise<st
     {
       method: "POST",
       body: formData,
+      headers: {
+        'Accept': 'application/json',
+      },
     }
   );
 
@@ -41,6 +44,90 @@ const uploadToCloudinary = async (fileUri: string, fileName: string): Promise<st
   return data.secure_url;
 };
 
+// --- Enhanced PDF URL generators ---
+export const generatePDFViewUrl = (cloudinaryUrl: string): string => {
+  try {
+    if (cloudinaryUrl && cloudinaryUrl.includes("cloudinary.com")) {
+      const parts = cloudinaryUrl.split("/upload/");
+      if (parts.length === 2) {
+        // For viewing: force inline display, optimize for web viewing
+        return `${parts[0]}/upload/fl_attachment:inline,f_auto,q_auto,w_1200,dpr_auto/${parts[1]}`;
+      }
+    }
+    return cloudinaryUrl;
+  } catch (error) {
+    console.error("Error generating PDF view URL:", error);
+    return cloudinaryUrl;
+  }
+};
+
+export const generatePDFDownloadUrl = (cloudinaryUrl: string, fileName?: string): string => {
+  try {
+    if (cloudinaryUrl && cloudinaryUrl.includes("cloudinary.com")) {
+      const parts = cloudinaryUrl.split("/upload/");
+      if (parts.length === 2) {
+        const downloadFileName = fileName ? encodeURIComponent(fileName) : 'paysheet.pdf';
+        // Force download with proper filename
+        return `${parts[0]}/upload/fl_attachment:${downloadFileName}/${parts[1]}`;
+      }
+    }
+    return cloudinaryUrl;
+  } catch (error) {
+    console.error("Error generating PDF download URL:", error);
+    return cloudinaryUrl;
+  }
+};
+
+// --- Enhanced mobile PDF URL generator ---
+export const generateMobilePDFUrl = (cloudinaryUrl: string): string => {
+  try {
+    if (cloudinaryUrl && cloudinaryUrl.includes("cloudinary.com")) {
+      const parts = cloudinaryUrl.split("/upload/");
+      if (parts.length === 2) {
+        // Optimized for mobile viewing - smaller file size, progressive loading
+        return `${parts[0]}/upload/f_auto,q_auto:eco,w_800,fl_progressive,fl_attachment:inline/${parts[1]}`;
+      }
+    }
+    return cloudinaryUrl;
+  } catch (error) {
+    console.error("Error generating mobile PDF URL:", error);
+    return cloudinaryUrl;
+  }
+};
+
+// --- Direct PDF URL for embedding ---
+export const generateEmbedPDFUrl = (cloudinaryUrl: string): string => {
+  try {
+    if (cloudinaryUrl && cloudinaryUrl.includes("cloudinary.com")) {
+      const parts = cloudinaryUrl.split("/upload/");
+      if (parts.length === 2) {
+        // For embedding in WebView or PDF viewers
+        return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+      }
+    }
+    return cloudinaryUrl;
+  } catch (error) {
+    console.error("Error generating embed PDF URL:", error);
+    return cloudinaryUrl;
+  }
+};
+
+// --- Get optimized URL based on usage ---
+export const getOptimizedPDFUrl = (cloudinaryUrl: string, usage: 'view' | 'download' | 'mobile' | 'embed' = 'view', fileName?: string): string => {
+  if (!cloudinaryUrl) return '';
+  
+  switch (usage) {
+    case 'download':
+      return generatePDFDownloadUrl(cloudinaryUrl, fileName);
+    case 'mobile':
+      return generateMobilePDFUrl(cloudinaryUrl);
+    case 'embed':
+      return generateEmbedPDFUrl(cloudinaryUrl);
+    case 'view':
+    default:
+      return generatePDFViewUrl(cloudinaryUrl);
+  }
+};
 
 // --- Create ---
 export const submitLoanApplication = async (formData: LoanFormData): Promise<string> => {
@@ -50,7 +137,9 @@ export const submitLoanApplication = async (formData: LoanFormData): Promise<str
 
     if (formData.paysheet) {
       paysheetName = formData.paysheet.name;
+      console.log('Uploading paysheet to Cloudinary:', paysheetName);
       paysheetUrl = await uploadToCloudinary(formData.paysheet.uri, paysheetName);
+      console.log('Paysheet uploaded successfully:', paysheetUrl);
     }
 
     const loanData: Omit<LoanApplication, 'id'> = {
@@ -66,6 +155,7 @@ export const submitLoanApplication = async (formData: LoanFormData): Promise<str
     };
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), loanData);
+    console.log('Loan application created with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
     console.error('Error submitting loan application:', error);
@@ -76,6 +166,7 @@ export const submitLoanApplication = async (formData: LoanFormData): Promise<str
 // --- Read all ---
 export const getLoanApplications = async (): Promise<LoanApplication[]> => {
   try {
+    console.log('Fetching loan applications from Firestore...');
     const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
     const applications: LoanApplication[] = [];
     
@@ -88,13 +179,14 @@ export const getLoanApplications = async (): Promise<LoanApplication[]> => {
         telephone: data.telephone,
         occupation: data.occupation,
         salary: data.salary,
-        paysheetUrl: data.paysheetUrl || '',       // <- safe fallback
-        paysheetName: data.paysheetName || '',     // <- safe fallback
+        paysheetUrl: data.paysheetUrl || '',
+        paysheetName: data.paysheetName || '',
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
       });
     });
 
+    console.log(`Fetched ${applications.length} applications`);
     return applications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   } catch (error) {
     console.error('Error fetching loan applications:', error);
@@ -102,10 +194,10 @@ export const getLoanApplications = async (): Promise<LoanApplication[]> => {
   }
 };
 
-
 // --- Update ---
 export const updateLoanApplication = async (id: string, formData: LoanFormData): Promise<void> => {
   try {
+    console.log('Updating loan application:', id);
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
     
@@ -117,9 +209,12 @@ export const updateLoanApplication = async (id: string, formData: LoanFormData):
     let paysheetUrl = existingData.paysheetUrl || '';
     let paysheetName = existingData.paysheetName || '';
 
+    // Only upload new file if provided
     if (formData.paysheet) {
+      console.log('Uploading new paysheet:', formData.paysheet.name);
       paysheetName = formData.paysheet.name;
       paysheetUrl = await uploadToCloudinary(formData.paysheet.uri, paysheetName);
+      console.log('New paysheet uploaded:', paysheetUrl);
     }
 
     const updateData = {
@@ -134,6 +229,7 @@ export const updateLoanApplication = async (id: string, formData: LoanFormData):
     };
 
     await updateDoc(docRef, updateData);
+    console.log('Loan application updated successfully');
   } catch (error) {
     console.error('Error updating loan application:', error);
     throw error;
@@ -143,8 +239,10 @@ export const updateLoanApplication = async (id: string, formData: LoanFormData):
 // --- Delete ---
 export const deleteLoanApplication = async (id: string): Promise<void> => {
   try {
+    console.log('Deleting loan application:', id);
     const docRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(docRef);
+    console.log('Loan application deleted successfully');
   } catch (error) {
     console.error('Error deleting loan application:', error);
     throw error;
@@ -154,21 +252,75 @@ export const deleteLoanApplication = async (id: string): Promise<void> => {
 // --- Get single ---
 export const getLoanApplication = async (id: string): Promise<LoanApplication | null> => {
   try {
+    console.log('Fetching single loan application:', id);
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return {
+      const data = docSnap.data();
+      const application = {
         id: docSnap.id,
-        ...docSnap.data(),
-        createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-        updatedAt: docSnap.data().updatedAt?.toDate() || new Date(),
+        name: data.name,
+        email: data.email,
+        telephone: data.telephone,
+        occupation: data.occupation,
+        salary: data.salary,
+        paysheetUrl: data.paysheetUrl || '',
+        paysheetName: data.paysheetName || '',
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
       } as LoanApplication;
+      
+      console.log('Application fetched successfully');
+      return application;
     }
     
+    console.log('Application not found');
     return null;
   } catch (error) {
     console.error('Error fetching loan application:', error);
     throw error;
+  }
+};
+
+// --- Utility functions for PDF handling ---
+export const validatePDFUrl = (url: string): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    new URL(url);
+    return url.includes('.pdf') || url.includes('cloudinary.com');
+  } catch {
+    return false;
+  }
+};
+
+export const getPDFFileName = (url: string, defaultName: string = 'document.pdf'): string => {
+  try {
+    if (!url) return defaultName;
+    const urlParts = url.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    if (fileName && fileName.includes('.pdf')) {
+      return decodeURIComponent(fileName);
+    }
+    return defaultName;
+  } catch {
+    return defaultName;
+  }
+};
+
+// --- Enhanced error handling for PDF operations ---
+export const handlePDFError = (error: any, operation: string): void => {
+  console.error(`PDF ${operation} error:`, error);
+  
+  if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+    throw new Error('Network error. Please check your internet connection and try again.');
+  } else if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+    throw new Error('Permission denied. Please check app permissions and try again.');
+  } else if (error.message?.includes('Not found') || error.message?.includes('404')) {
+    throw new Error('PDF file not found. The file may have been moved or deleted.');
+  } else if (error.message?.includes('deprecated')) {
+    throw new Error('PDF functionality is being updated. Please try again.');
+  } else {
+    throw new Error(`Failed to ${operation} PDF. Please try again.`);
   }
 };
