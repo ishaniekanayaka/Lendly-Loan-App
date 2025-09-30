@@ -218,128 +218,7 @@ export default function ApplicationsScreen() {
     }
   };
 
-  // const handleDownloadPdf = async (url: string, fileName?: string, applicationId?: string) => {
-  //   if (!url?.trim()) {
-  //     Alert.alert('Error', 'PDF not available for download');
-  //     return;
-  //   }
-
-  //   setIsDownloading(applicationId || 'downloading');
-    
-  //   try {
-  //     // Generate download URL with proper headers
-  //     const downloadUrl = generatePDFDownloadUrl(url);
-  //     const defaultFileName = fileName || `paysheet_${applicationId || Date.now()}.pdf`;
-      
-  //     if (Platform.OS === 'web') {
-  //       // For web, create download link
-  //       const link = document.createElement('a');
-  //       link.href = downloadUrl;
-  //       link.download = defaultFileName;
-  //       document.body.appendChild(link);
-  //       link.click();
-  //       document.body.removeChild(link);
-  //     } else {
-  //       // For mobile platforms
-  //       const fileUri = `${FileSystem.documentDirectory}${defaultFileName}`;
-        
-  //       console.log('Downloading from:', downloadUrl);
-  //       console.log('Saving to:', fileUri);
-        
-  //       // Download the file
-  //       const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
-        
-  //       if (downloadResult.status === 200) {
-  //         console.log('Download successful:', downloadResult.uri);
-          
-  //         // Check if sharing is available
-  //         const isAvailable = await Sharing.isAvailableAsync();
-          
-  //         if (Platform.OS === 'android') {
-  //           // For Android, try to save to Downloads and share
-  //           try {
-  //             // Request media library permissions
-  //             const { status } = await MediaLibrary.requestPermissionsAsync();
-              
-  //             if (status === 'granted') {
-  //               // Save to media library (Downloads folder)
-  //               const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-  //               await MediaLibrary.createAlbumAsync('Downloads', asset, false);
-                
-  //               Alert.alert(
-  //                 'Download Complete',
-  //                 `PDF saved to Downloads folder as ${defaultFileName}`,
-  //                 [
-  //                   {
-  //                     text: 'Open',
-  //                     onPress: () => {
-  //                       Sharing.shareAsync(downloadResult.uri, {
-  //                         mimeType: 'application/pdf',
-  //                         dialogTitle: 'Open PDF with...'
-  //                       });
-  //                     }
-  //                   },
-  //                   { text: 'OK' }
-  //                 ]
-  //               );
-  //             } else {
-  //               // If no permission, still offer to share/open
-  //               Alert.alert(
-  //                 'Download Complete',
-  //                 'PDF downloaded successfully',
-  //                 [
-  //                   {
-  //                     text: 'Open',
-  //                     onPress: () => {
-  //                       if (isAvailable) {
-  //                         Sharing.shareAsync(downloadResult.uri, {
-  //                           mimeType: 'application/pdf',
-  //                           dialogTitle: 'Open PDF with...'
-  //                         });
-  //                       }
-  //                     }
-  //                   },
-  //                   { text: 'OK' }
-  //                 ]
-  //               );
-  //             }
-  //           } catch (mediaError) {
-  //             console.error('Media library error:', mediaError);
-  //             // Fallback to sharing
-  //             if (isAvailable) {
-  //               await Sharing.shareAsync(downloadResult.uri, {
-  //                 mimeType: 'application/pdf',
-  //                 dialogTitle: 'Open PDF with...'
-  //               });
-  //             } else {
-  //               Alert.alert('Download Complete', 'PDF downloaded successfully');
-  //             }
-  //           }
-  //         } else {
-  //           // For iOS
-  //           if (isAvailable) {
-  //             await Sharing.shareAsync(downloadResult.uri, {
-  //               mimeType: 'application/pdf'
-  //             });
-  //           } else {
-  //             Alert.alert('Download Complete', 'PDF downloaded successfully');
-  //           }
-  //         }
-  //       } else {
-  //         throw new Error(`Download failed with status: ${downloadResult.status}`);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error downloading PDF:', error);
-  //     Alert.alert(
-  //       'Download Error',
-  //       'Failed to download PDF. Please check your internet connection and try again.'
-  //     );
-  //   } finally {
-  //     setIsDownloading('');
-  //   }
-  // };
-
+ 
   const handleEdit = async (application: LoanApplication) => {
     try {
       const fullApp = await getLoanApplication(application.id!);
@@ -426,6 +305,8 @@ export default function ApplicationsScreen() {
       setIsUpdating(false);
     }
   };
+
+  
 
   const renderApplication = ({ item }: { item: LoanApplication }) => (
     <View style={styles.applicationCard}>

@@ -20,7 +20,13 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ishaniekanayake.Lendly"
+      "package": "com.ishaniekanayake.Lendly",
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ]
     },
     "web": {
       "output": "static",
@@ -41,7 +47,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow app to save PDFs to your device",
+          "savePhotosPermission": "Allow app to save PDFs to Downloads"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

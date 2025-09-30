@@ -1,3 +1,151 @@
+// import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+// import { db } from '@/firebase';
+// import { LoanApplication, LoanFormData } from '@/types/loan';
+
+// // ---------------- Cloudinary Config ----------------
+// const CLOUDINARY_UPLOAD_PRESET = "lendy-loan"; 
+// const CLOUDINARY_CLOUD_NAME = "dwcvrttrd"; 
+// const COLLECTION_NAME = 'loanApplications';
+
+// // ----------------------------------------------------
+// // Upload Image to Cloudinary (for profile, etc.)
+// // ----------------------------------------------------
+// export const uploadImage = async (uri: string, fileName: string) => {
+//   const formData = new FormData();
+//   formData.append("file", { uri, type: "image/jpeg", name: fileName } as any);
+//   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+//   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+//     method: "POST",
+//     body: formData,
+//   });
+
+//   const data = await res.json();
+//   if (!data.secure_url) throw new Error("Image upload failed");
+//   return data.secure_url;
+// };
+
+// // ----------------------------------------------------
+// // Upload PDF/Docs to Cloudinary (must use raw/upload)
+// // ----------------------------------------------------
+// export const uploadPdf = async (uri: string, fileName: string) => {
+//   const formData = new FormData();
+//   formData.append("file", { uri, type: "application/pdf", name: fileName } as any);
+//   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+//   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`, {
+//     method: "POST",
+//     body: formData,
+//   });
+
+//   const data = await res.json();
+//   if (!data.secure_url) throw new Error("PDF upload failed");
+//   return data.secure_url; // ✅ Correct public link
+// };
+
+// // ----------------------------------------------------
+// // CREATE (Save new Loan + upload PDF to Cloudinary)
+// // ----------------------------------------------------
+// export const submitLoanApplication = async (formData: LoanFormData): Promise<string> => {
+//   let paysheetUrl = '';
+//   let paysheetName = '';
+
+//   if (formData.paysheet) {
+//     paysheetName = formData.paysheet.name;
+//     paysheetUrl = await uploadPdf(formData.paysheet.uri, paysheetName); // ✅ use uploadPdf
+//   }
+
+//   const loanData: Omit<LoanApplication, 'id'> = {
+//     name: formData.name,
+//     email: formData.email,
+//     telephone: formData.telephone,
+//     occupation: formData.occupation,
+//     salary: formData.salary,
+//     paysheetUrl, 
+//     paysheetName,
+//     createdAt: new Date(),
+//     updatedAt: new Date(),
+//   };
+
+//   const docRef = await addDoc(collection(db, COLLECTION_NAME), loanData);
+//   return docRef.id;
+// };
+
+// // ----------------------------------------------------
+// // READ ALL (Get all loan applications with PDF URL)
+// // ----------------------------------------------------
+// export const getLoanApplications = async (): Promise<LoanApplication[]> => {
+//   const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+//   const applications: LoanApplication[] = [];
+
+//   querySnapshot.forEach((docSnap) => {
+//     const data = docSnap.data();
+//     applications.push({
+//       id: docSnap.id,
+//       ...data,
+//       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+//       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+//     } as LoanApplication);
+//   });
+
+//   return applications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+// };
+
+// // ----------------------------------------------------
+// // READ ONE (Get single application by ID)
+// // ----------------------------------------------------
+// export const getLoanApplication = async (id: string): Promise<LoanApplication | null> => {
+//   const docRef = doc(db, COLLECTION_NAME, id);
+//   const docSnap = await getDoc(docRef);
+
+//   if (docSnap.exists()) {
+//     const data = docSnap.data();
+//     return {
+//       id: docSnap.id,
+//       ...data,
+//       createdAt: data.createdAt?.toDate() || new Date(),
+//       updatedAt: data.updatedAt?.toDate() || new Date(),
+//     } as LoanApplication;
+//   }
+//   return null;
+// };
+
+// // ----------------------------------------------------
+// // UPDATE (Update details + replace PDF if new uploaded)
+// // ----------------------------------------------------
+// export const updateLoanApplication = async (id: string, formData: LoanFormData): Promise<void> => {
+//   const docRef = doc(db, COLLECTION_NAME, id);
+//   const docSnap = await getDoc(docRef);
+
+//   if (!docSnap.exists()) throw new Error('Application not found');
+
+//   let paysheetUrl = docSnap.data().paysheetUrl || '';
+//   let paysheetName = docSnap.data().paysheetName || '';
+
+//   if (formData.paysheet) {
+//     paysheetName = formData.paysheet.name;
+//     paysheetUrl = await uploadPdf(formData.paysheet.uri, paysheetName); // ✅ use uploadPdf
+//   }
+
+//   await updateDoc(docRef, {
+//     name: formData.name,
+//     email: formData.email,
+//     telephone: formData.telephone,
+//     occupation: formData.occupation,
+//     salary: formData.salary,
+//     paysheetUrl,
+//     paysheetName,
+//     updatedAt: new Date(),
+//   });
+// };
+
+// // ----------------------------------------------------
+// // DELETE (Remove loan application by ID)
+// // ----------------------------------------------------
+// export const deleteLoanApplication = async (id: string): Promise<void> => {
+//   const docRef = doc(db, COLLECTION_NAME, id);
+//   await deleteDoc(docRef);
+// };
 // loanService.ts
 
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
@@ -43,6 +191,8 @@ const uploadToCloudinary = async (fileUri: string, fileName: string): Promise<st
   const data = await uploadResponse.json();
   return data.secure_url;
 };
+
+
 
 // --- Enhanced PDF URL generators ---
 export const generatePDFViewUrl = (cloudinaryUrl: string): string => {
